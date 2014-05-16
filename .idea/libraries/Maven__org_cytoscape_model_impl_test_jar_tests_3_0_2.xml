@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.cytoscape:model-impl:test-jar:tests:3.0.2">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cytoscape/model-impl/3.0.2/model-impl-3.0.2-tests.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cytoscape/model-impl/3.0.2/model-impl-3.0.2-test-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cytoscape/model-impl/3.0.2/model-impl-3.0.2-test-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

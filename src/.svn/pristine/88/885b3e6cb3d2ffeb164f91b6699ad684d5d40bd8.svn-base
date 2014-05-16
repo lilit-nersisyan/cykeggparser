@@ -1,0 +1,24 @@
+#Cytoscape Property File
+#Sat Dec 28 14:42:44 GMT+04:00 2013
+tuning.geneExpression=true
+auto.bindingDirProcessing=true
+tuning.ppi.source.KEGG=true
+tuning.ppi=false
+webimport.organism=generic map
+tuning.generateNewNetwork=true
+auto.groupProcessing=true
+tuning.tissueType=Normal
+tuning.expThreshold=36
+tuning.tse.conflictMode=mean
+tuning.ppi.source.GRID=true
+tuning.tissue=Gr1hi
+tuning.typeAttr=Type
+auto.compoundProcessing=true
+tuning.ppi.source.DIP=true
+tuning.ppi.source.MINT=true
+tuning.geneIdAttr=EntrezIDs
+tuning.typeValues=gene
+tuning.ppi.threshold=800
+tuning.ppi.source.PDB=true
+tuning.database=User supplied data
+webimport.pathway=Fc gamma R-mediated phagocytosis

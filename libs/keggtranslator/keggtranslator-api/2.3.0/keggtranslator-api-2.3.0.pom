@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>keggtranslator</groupId>
+    <artifactId>keggtranslator-api</artifactId>
+    <version>2.3.0</version>
+    <description>POM was created from install:install-file</description>
+    <repositories>
+        <repository>
+            <id>libs</id>
+            <name>localRepository</name>
+            <url>file://${project.basedir}/libs</url>
+        </repository>
+    </repositories>
+    <build>
+        <defaultGoal>package</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>keggtranslator</groupId>
+                <artifactId>keggtranslator-api</artifactId>
+                <version>2.3.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifestEntries>
+                            <Export-Package>de.zbit.*</Export-Package>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

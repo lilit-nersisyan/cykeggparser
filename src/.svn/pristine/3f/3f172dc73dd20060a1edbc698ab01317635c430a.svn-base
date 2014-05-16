@@ -1,0 +1,644 @@
+package org.cytoscape.keggparser.parsing;
+
+
+import org.cytoscape.keggparser.KEGGParserPlugin;
+import org.cytoscape.keggparser.com.*;
+import org.cytoscape.keggparser.tuning.NetworkManager;
+import org.cytoscape.model.*;
+import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.view.model.View;
+import org.cytoscape.view.presentation.property.BasicVisualLexicon;
+import org.cytoscape.view.presentation.property.LineTypeVisualProperty;
+import org.cytoscape.view.presentation.property.values.ArrowShape;
+import org.cytoscape.view.presentation.property.values.LineType;
+import org.cytoscape.view.presentation.property.values.NodeShape;
+import org.cytoscape.view.vizmap.VisualMappingFunction;
+import org.cytoscape.view.vizmap.VisualPropertyDependency;
+import org.cytoscape.view.vizmap.VisualStyle;
+import org.cytoscape.view.vizmap.mappings.DiscreteMapping;
+import org.slf4j.LoggerFactory;
+
+import java.awt.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.List;
+
+
+public class KeggNetworkCreator {
+
+    private CyNetwork network;
+    private CyNetworkView networkView;
+    private CyTable cyNodeAttrs;
+    private CyTable cyEdgeAttrs;
+    private CyTable networkAttrs;
+    private VisualStyle visualStyle;
+    private Graph graph;
+
+
+    private Long networkID;
+
+    CyTable nodeTable;
+    CyTable edgeTable;
+    TreeMap<Integer, Long> keggNodeIdMap;
+    TreeMap<String, Long> keggEdgeIdMap;
+    private HashMap<CyNode, Integer> groupCyNodeEntryIdMap = new HashMap<>();
+
+
+    public CyNetwork createNetwork(File kgml) {
+        parseKgml(kgml);
+        loadNetworkComponents();
+        loadGraphAttributes();
+        loadNodeAttributes();
+        loadEdgeAttributes();
+
+//        if (EKeggProps.ProcessGroups.getOldValue())
+//            processGroups();
+        performVisualMapping();
+//        visualStyle.apply(networkView);
+//        networkView.updateView();
+        return network;
+    }
+
+    private void parseKgml(File kgml) {
+//        if (!KeggWebLoadFrame.checkConnection())
+//            removeDoctypeDeclaration(kgml);
+        Parser parser = new Parser();
+        graph = parser.parse(kgml);
+
+
+        if (EKeggProps.ProcessCompounds.getOldValue())
+            this.graph.processCompounds();
+        if (EKeggProps.ProcessBindingDirs.getOldValue())
+            this.graph.correctEdgeDirections();
+        if (EKeggProps.ProcessGroups.getOldValue()){
+            this.graph.flagGroupNodes();
+            this.graph.processGroups();
+        }
+    }
+
+    private void removeDoctypeDeclaration(File kgml) {
+
+        try {
+
+//            FileReader reader = new FileReader(kgml);
+            Scanner scanner = new Scanner(kgml);
+            StringBuffer buffer = new StringBuffer();
+            boolean closed = false;
+            String line;
+            while (!closed && scanner.hasNext()) {
+                line = scanner.nextLine();
+
+                if (line.contains("DOCTYPE")) {
+
+                    while (scanner.hasNext()) {
+                        line = scanner.nextLine();
+                        buffer.append(line + "\n");
+                    }
+                    closed = true;
+                    scanner.close();
+                    PrintWriter writer = new PrintWriter(kgml);
+                    writer.write(String.valueOf(buffer));
+                    writer.close();
+                } else
+                    buffer.append(line + "\n");
+            }
+
+        } catch (FileNotFoundException e) {
+            ParsingReportGenerator.getInstance().append("Problem reading kgml file " + kgml.toString());
+            LoggerFactory.getLogger(KeggNetworkCreator.class).error("Problem reading kgml file " + kgml.toString());
+        }
+    }
+
+
+    private void performVisualMapping() {
+        visualStyle = KEGGParserPlugin.visualStyleFactory.createVisualStyle("kegg_vs");
+        Set<VisualStyle> visualStyles = KEGGParserPlugin.visualMappingManager.getAllVisualStyles();
+
+        boolean isVisualStylePresent = false;
+        for (VisualStyle vs : visualStyles) {
+            if (vs.getTitle().equals(visualStyle.getTitle())) {
+                isVisualStylePresent = true;
+                visualStyle = vs;
+            }
+        }
+
+        // Node attribute mapping
+
+        VisualMappingFunction<String, Paint> nodeColorMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.BGCOLOR.getAttrName(), String.class, BasicVisualLexicon.NODE_FILL_COLOR);
+        VisualMappingFunction<String, Paint> nodeLabelColorMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.FGCOLOR.getAttrName(), String.class, BasicVisualLexicon.NODE_LABEL_COLOR);
+        VisualMappingFunction<String, String> nodeLabelMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.LABEL.getAttrName(), String.class, BasicVisualLexicon.NODE_LABEL);
+        VisualMappingFunction<String, NodeShape> nodeShapeMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.SHAPE.getAttrName(), String.class, BasicVisualLexicon.NODE_SHAPE);
+        VisualMappingFunction<String, Double> nodeHeightMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.HEIGHT.getAttrName(), String.class, BasicVisualLexicon.NODE_HEIGHT);
+        VisualMappingFunction<String, Double> nodeWidthMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction
+                (EKeggNodeAttrs.WIDTH.getAttrName(), String.class, BasicVisualLexicon.NODE_WIDTH);
+
+        visualStyle.setDefaultValue(BasicVisualLexicon.NODE_LABEL_FONT_SIZE, 7);
+        visualStyle.addVisualMappingFunction(nodeLabelMapping);
+        visualStyle.addVisualMappingFunction(nodeLabelColorMapping);
+        visualStyle.addVisualMappingFunction(nodeColorMapping);
+        visualStyle.addVisualMappingFunction(nodeShapeMapping);
+        visualStyle.addVisualMappingFunction(nodeHeightMapping);
+        visualStyle.addVisualMappingFunction(nodeWidthMapping);
+
+        // Edge attribute mapping
+        visualStyle.setDefaultValue(BasicVisualLexicon.EDGE_LABEL_FONT_SIZE, 12);
+        DiscreteMapping<String, LineType> edgeLineStyleMapping = (DiscreteMapping<String, LineType>)
+                KEGGParserPlugin.vmfFactoryD.createVisualMappingFunction(EKeggEdgeAttrs.LINESTYLE.getAttrName(),
+                        String.class, BasicVisualLexicon.EDGE_LINE_TYPE);
+        edgeLineStyleMapping.putMapValue(LineTypeVisualProperty.SOLID.getDisplayName(), LineTypeVisualProperty.SOLID);
+        edgeLineStyleMapping.putMapValue(LineTypeVisualProperty.LONG_DASH.getDisplayName(), LineTypeVisualProperty.LONG_DASH);
+        edgeLineStyleMapping.putMapValue(LineTypeVisualProperty.DOT.getDisplayName(), LineTypeVisualProperty.DOT);
+        edgeLineStyleMapping.putMapValue(LineTypeVisualProperty.DASH_DOT.getDisplayName(), LineTypeVisualProperty.DASH_DOT);
+        edgeLineStyleMapping.putMapValue(LineTypeVisualProperty.EQUAL_DASH.getDisplayName(), LineTypeVisualProperty.EQUAL_DASH);
+        VisualMappingFunction<String, String> edgeLabelMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction(
+                EKeggEdgeAttrs.EDGELABEL.getAttrName(), String.class, BasicVisualLexicon.EDGE_LABEL);
+        VisualMappingFunction<String, ArrowShape> arrowShapeMapping = KEGGParserPlugin.vmfFactoryP.createVisualMappingFunction(
+                EKeggEdgeAttrs.ARROWSHAPE.getAttrName(), String.class, BasicVisualLexicon.EDGE_TARGET_ARROW_SHAPE);
+        visualStyle.addVisualMappingFunction(edgeLineStyleMapping);
+        visualStyle.addVisualMappingFunction(edgeLabelMapping);
+        visualStyle.addVisualMappingFunction(arrowShapeMapping);
+        if (!isVisualStylePresent)
+            KEGGParserPlugin.visualMappingManager.addVisualStyle(visualStyle);
+        Iterator iterator = visualStyle.getAllVisualPropertyDependencies().iterator();
+        VisualPropertyDependency dependency = null;
+        while (iterator.hasNext()) {
+            VisualPropertyDependency dep = (VisualPropertyDependency) iterator.next();
+            if (dep.getDisplayName().equalsIgnoreCase("Lock \n" +
+                    "node width and height")) ;
+            dependency = dep;
+        }
+
+        if (dependency != null && dependency.isDependencyEnabled())
+            dependency.setDependency(false);
+        KEGGParserPlugin.cyEventHelper.flushPayloadEvents();
+//        if (visualStyle != null && visualStyles.contains(visualStyle))
+        visualStyle.apply(networkView);
+        networkView.updateView();
+//        else
+
+    }
+
+    private void loadEdgeAttributes() {
+        edgeTable = network.getDefaultEdgeTable();
+        for (EKeggEdgeAttrs attr : EKeggEdgeAttrs.values()) {
+            try {
+                edgeTable.createColumn(attr.getAttrName(), String.class, false);
+            } catch (IllegalArgumentException e) {
+            }
+        }
+
+        for (KeggRelation relation : graph.getRelations()) {
+            CyEdge edge = network.getEdge(keggEdgeIdMap.get(relation.getEntry1().getId() + "_" + relation.getEntry2().getId()));
+            CyRow edgeRow = edgeTable.getRow(edge.getSUID());
+
+            edgeRow.set(EKeggEdgeAttrs.ENTRY1.getAttrName(), relation.getEntry1().getId() + "");
+            edgeRow.set(EKeggEdgeAttrs.ENTRY2.getAttrName(), relation.getEntry2().getId() + "");
+            edgeRow.set(EKeggEdgeAttrs.TYPE.getAttrName(), relation.getType());
+            edgeRow.set(EKeggEdgeAttrs.TYPE_MAPPED.getAttrName(), mapRelationType(relation.getType()));
+            edgeRow.set(EKeggEdgeAttrs.SUBTYPE1.getAttrName(), relation.getSubtype1());
+            edgeRow.set(EKeggEdgeAttrs.SUBTYPE2.getAttrName(), relation.getSubtype2());
+            edgeRow.set(EKeggEdgeAttrs.ARROWSHAPE.getAttrName(), relation.getArrowShape().getDisplayName());
+            edgeRow.set(EKeggEdgeAttrs.LINESTYLE.getAttrName(), relation.getLineStyle().getDisplayName());
+            edgeRow.set(EKeggEdgeAttrs.EDGELABEL.getAttrName(), relation.getEdgeLabel());
+            edgeRow.set(EKeggEdgeAttrs.RELATIONVALUE1.getAttrName(), relation.getRelationValue1());
+            edgeRow.set(EKeggEdgeAttrs.RELATIONVALUE2.getAttrName(), relation.getRelationValue2());
+            edgeRow.set(EKeggEdgeAttrs.COMMENT.getAttrName(), relation.getComment());
+            edgeRow.set(EKeggEdgeAttrs.KEGG_TYPE.getAttrName(), relation.getType());
+        }
+
+    }
+
+    private void loadNodeAttributes() {
+        nodeTable = network.getDefaultNodeTable();
+        for (EKeggNodeAttrs attr : EKeggNodeAttrs.values()) {
+            try {
+                nodeTable.createColumn(attr.getAttrName(), String.class, false);
+            } catch (IllegalArgumentException e) {
+            }
+        }
+        for (KeggNode keggNode : graph.getNodes().values()) {
+            CyNode node = network.getNode(keggNodeIdMap.get(keggNode.getId()));
+            CyRow nodeRow = nodeTable.getRow(node.getSUID());
+
+            nodeRow.set(EKeggNodeAttrs.ENTRY_ID.getAttrName(), keggNode.getId() + "");
+            nodeRow.set(EKeggNodeAttrs.LABEL.getAttrName(), keggNode.getCellName());
+            nodeRow.set(EKeggNodeAttrs.NAME.getAttrName(), keggNode.getName());
+            nodeRow.set(EKeggNodeAttrs.GRAPHICSNAME.getAttrName(), keggNode.getGraphicsName());
+            nodeRow.set(EKeggNodeAttrs.EntrezIDs.getAttrName(), keggNode.getEntrezIDs());
+            nodeRow.set(EKeggNodeAttrs.TYPE.getAttrName(), keggNode.getType());
+//            nodeRow.set(EKeggNodeAttrs.COLOR.getAttrName(), keggNode.getBgColor().toString());
+            nodeRow.set(EKeggNodeAttrs.LINK.getAttrName(), keggNode.getLink());
+            nodeRow.set(EKeggNodeAttrs.SHAPE.getAttrName(), keggNode.getShape());
+            nodeRow.set(EKeggNodeAttrs.WIDTH.getAttrName(), keggNode.getWidth() + "");
+            nodeRow.set(EKeggNodeAttrs.HEIGHT.getAttrName(), keggNode.getHeight() + "");
+            nodeRow.set(EKeggNodeAttrs.COMMENT.getAttrName(), keggNode.getComment());
+            nodeRow.set(EKeggNodeAttrs.GROUP.getAttrName(), keggNode.getGroupId() + "");
+            nodeRow.set(EKeggNodeAttrs.FGCOLOR.getAttrName(), keggNode.getFgColorAttr());
+            nodeRow.set(EKeggNodeAttrs.BGCOLOR.getAttrName(), keggNode.getBgColorAttr());
+            nodeRow.set(EKeggNodeAttrs.KEGG_X.getAttrName(), "" + keggNode.getX());
+            nodeRow.set(EKeggNodeAttrs.KEGG_Y.getAttrName(), "" + keggNode.getY());
+
+            View<CyNode> nodeView = networkView.getNodeView(node);
+            nodeView.setVisualProperty(BasicVisualLexicon.NODE_X_LOCATION, (keggNode.getX() ));
+            nodeView.setVisualProperty(BasicVisualLexicon.NODE_Y_LOCATION, (keggNode.getY() ));
+
+        }
+    }
+
+    private void loadGraphAttributes() {
+        CyTable networkTable = network.getDefaultNetworkTable();
+        networkTable.setTitle(graph.getTitle());
+        CyRow networkRow = networkTable.getRow(networkID);
+        try {
+            for (EKGMLNetworkAttrs attr : EKGMLNetworkAttrs.values()){
+                if (!attr.getAttrName().equals(CyNetwork.NAME))
+                    networkTable.createColumn(attr.getAttrName(), String.class, false);
+            }
+        } catch (IllegalArgumentException e) {
+
+        }
+
+        networkRow.set(EKGMLNetworkAttrs.TITLE.getAttrName(), graph.getTitle());
+        networkRow.set(EKGMLNetworkAttrs.NUMBER.getAttrName(), graph.getNumber());
+        networkRow.set(EKGMLNetworkAttrs.LINK.getAttrName(), graph.getLink());
+        networkRow.set(EKGMLNetworkAttrs.IMAGE.getAttrName(), graph.getImage());
+        networkRow.set(EKGMLNetworkAttrs.ORGANISM.getAttrName(), graph.getOrganism());
+    }
+
+    private void loadNetworkComponents() {
+        network = KEGGParserPlugin.networkFactory.createNetwork();
+//        KEGGParserPlugin.networkManager.addNetwork(network);
+        network.getRow(network).set(CyNetwork.NAME, network.getSUID() + "_" + graph.getTitle());
+        networkID = network.getSUID();
+
+        //Load nodes
+        keggNodeIdMap = new TreeMap<>();
+        for (KeggNode keggNode : graph.getNodes().values()) {
+            CyNode node = network.addNode();
+            network.getRow(node).set(CyNetwork.NAME, keggNode.getName());
+            keggNodeIdMap.put(keggNode.getId(), node.getSUID());
+            if (keggNode.getType().equals(KeggNode.GROUP))
+                groupCyNodeEntryIdMap.put(node, keggNode.getId());
+        }
+
+        //Load edges
+        keggEdgeIdMap = new TreeMap<>();
+        for (KeggRelation relation : graph.getRelations()) {
+            CyNode node1 = network.getNode(keggNodeIdMap.get(relation.getEntry1().getId()));
+            CyNode node2 = network.getNode(keggNodeIdMap.get(relation.getEntry2().getId()));
+            CyEdge edge = network.addEdge(node1, node2, true);
+            keggEdgeIdMap.put(relation.getEntry1().getId() + "_" + relation.getEntry2().getId(), edge.getSUID());
+        }
+
+
+        KEGGParserPlugin.networkManager.addNetwork(network);
+//        networkView = KEGGParserPlugin.networkViewFactory.createNetworkView(network);
+//        KEGGParserPlugin.cyEventHelper.flushPayloadEvents();
+
+        Collection<CyNetworkView> networkViews = KEGGParserPlugin.networkViewManager.getNetworkViews(network);
+        if (networkViews.isEmpty()) {
+            networkView = KEGGParserPlugin.networkViewFactory.createNetworkView(network);
+            KEGGParserPlugin.networkViewManager.addNetworkView(networkView);
+        } else
+            networkView = networkViews.iterator().next();
+
+    }
+
+    private void processGroups() {
+        KEGGParserPlugin.getParsingLog().debug("Group node processing ON");
+        String groupNodes = "";
+
+        for (CyNode groupCyNode : groupCyNodeEntryIdMap.keySet()) {
+            ArrayList<CyNode> components = new ArrayList<CyNode>();
+            ArrayList compIndices = new ArrayList();
+            int entryId = groupCyNodeEntryIdMap.get(groupCyNode);
+            KeggNode groupNode = graph.getNode(entryId);
+
+            groupNodes += groupNode.getId() + ":";
+
+            for (int id : groupNode.getComponentIds()) {
+                CyNode component = null;
+                CyRow row = null;
+                Collection<CyRow> rows = network.getDefaultNodeTable().
+                        getMatchingRows(EKeggNodeAttrs.ENTRY_ID.getAttrName(), id + "");
+                if (!rows.isEmpty()) {
+                    row = rows.iterator().next();
+                    component = network.getNode(row.get(CyNetwork.SUID, Long.class));
+                }
+                if (component != null) {
+                    NetworkManager.setAttribute(EKeggNodeAttrs.GROUP.getAttrName(),
+                            groupNode.getId(), row, network);
+                    components.add(component);
+                    compIndices.add(component.getSUID());
+                    groupNodes += id + ",";
+                }
+            }
+            groupNodes += ";";
+
+            //Copy group edges to the
+            CyNode inNode = null;
+            CyNode outNode;
+            ArrayList<CyNode> inComponents = new ArrayList<CyNode>();
+            ArrayList<CyNode> outComponents = new ArrayList<CyNode>();
+            ArrayList<CyNode> biComponents = new ArrayList<CyNode>();
+            ArrayList<CyNode> incomingNodes = new ArrayList<CyNode>();
+            ArrayList<CyNode> outgoingNodes = new ArrayList<CyNode>();
+            ArrayList<CyNode> incomingGroupNodes = new ArrayList<CyNode>();
+            ArrayList<CyNode> outgoingGroupNodes = new ArrayList<CyNode>();
+
+            //Sort nodes according to indegree and outdegree composition
+            for (CyNode cyNode : network.getNodeList()) {
+                if (network.containsEdge(cyNode, groupCyNode)) {
+                    if (!incomingGroupNodes.contains(cyNode))
+                        incomingGroupNodes.add(cyNode);
+                } else if (network.containsEdge(groupCyNode, cyNode)) {
+                    if (!outgoingGroupNodes.contains(cyNode))
+                        outgoingGroupNodes.add(cyNode);
+                }
+                int size = components.size();
+                for (CyNode component : components) {
+                    if (network.containsEdge(cyNode, component)) {
+                        if (!incomingNodes.contains(cyNode))
+                            incomingNodes.add(cyNode);
+                        if (outComponents.contains(component)) {
+                            if (!biComponents.contains(component))
+                                biComponents.add(component);
+                            outComponents.remove(component);
+                        } else if (!inComponents.contains(component))
+                            inComponents.add(component);
+                    } else if (network.containsEdge(component, cyNode)) {
+                        if (inComponents.contains(component)) {
+                            if (!biComponents.contains(component))
+                                biComponents.add(component);
+                            inComponents.remove(component);
+                        } else if (!outComponents.contains(component))
+                            outComponents.add(component);
+                        if (!outgoingNodes.contains(cyNode))
+                            outgoingNodes.add(cyNode);
+                    }
+                }
+
+            }
+
+            for (CyNode component : inComponents)
+                components.remove(component);
+            for (CyNode component : outComponents)
+                components.remove(component);
+            for (CyNode component : biComponents)
+                components.remove(component);
+
+            CyNode prevNode = null;
+
+            if (biComponents.size() > 0) {
+                if (inComponents.size() > 0) {
+                    if (outComponents.isEmpty())
+                        for (CyNode biNode : biComponents) {
+                            if (!outComponents.contains(biNode))
+                                outComponents.add(biNode);
+                        }
+                } else for (CyNode biNode : biComponents) {
+                    if (!inComponents.contains(biNode))
+                        inComponents.add(biNode);
+                }
+            }
+
+
+
+                    /*
+                    Make the first node the innode. Remove all other incomming edges and move them to
+                    the innode.
+                     */
+            if (inComponents.size() > 0) {
+                inNode = inComponents.get(0);
+                prevNode = inNode;
+                inComponents.remove(0);
+                if (inComponents.size() > 0)
+                    for (CyNode componentNode : inComponents) {
+                        for (CyNode incomingNode : incomingNodes)
+                            if (network.containsEdge(incomingNode, componentNode)) {
+                                redirectEdge(incomingNode, componentNode, incomingNode, inNode);
+                            }
+                        connectNodes(prevNode, componentNode);
+                        prevNode = componentNode;
+                    }
+
+            } else if (components.size() > 0) {
+                inNode = components.get(0);
+                components.remove(0);
+                prevNode = inNode;
+            } else if (outComponents.size() > 0) {
+                inNode = outComponents.get(0);
+            }
+
+
+            while (components.size() > 0) {
+                if (prevNode != null)
+                    connectNodes(prevNode, components.get(0));
+                prevNode = components.get(0);
+                components.remove(0);
+            }
+                    /*
+                    Make the first node the outNode. Remove all the edges from other
+                    components in outComponents and redirect them from the outNode.
+                     */
+            if (outComponents.size() > 0) {
+                outNode = outComponents.get(0);
+                outComponents.remove(0);
+                if (outComponents.size() > 0)
+                    for (CyNode componentNode : outComponents) {
+                        for (CyNode outgoingNode : outgoingNodes)
+                            if (network.containsEdge(componentNode, outgoingNode)) {
+                                redirectEdge(componentNode, outgoingNode, outNode, outgoingNode);
+                            }
+                        if (prevNode != null)
+                            network.addEdge(prevNode, componentNode, true);
+                        prevNode = componentNode;
+                    }
+                connectNodes(prevNode, outNode);
+            } else outNode = prevNode;
+
+                /*
+                Add the edges to the group node to the inNode and outNode.
+                Remove group node.
+                 */
+            if (!incomingGroupNodes.isEmpty())
+                for (CyNode incomingGroupNode : incomingGroupNodes) {
+                    redirectEdge(incomingGroupNode, groupCyNode, incomingGroupNode, inNode);
+                }
+            if (!outgoingGroupNodes.isEmpty())
+                for (CyNode outgoingGroupNode : outgoingGroupNodes) {
+                    redirectEdge(groupCyNode, outgoingGroupNode, outNode, outgoingGroupNode);
+                }
+            for (CyNode outGoingNode : outgoingNodes) {
+                if (network.containsEdge(inNode, outGoingNode)) {
+                    redirectEdge(inNode, outGoingNode, outNode, outGoingNode);
+                }
+            }
+
+            for (CyNode inComingNode : incomingNodes) {
+                if (network.containsEdge(inComingNode, outNode)) {
+                    redirectEdge(inComingNode, outNode, inComingNode, inNode);
+                }
+            }
+
+            KEGGParserPlugin.getParsingLog().debug("Group node " + groupCyNode.getSUID().toString() + " processed");
+//            deletNodeAttributes(groupCyNode);
+        }
+        network.removeNodes(groupCyNodeEntryIdMap.keySet());
+        NetworkManager.setAttribute("GroupNodes", groupNodes, network.getRow(network), network);
+    }
+
+
+    private CyEdge redirectEdge(CyNode prevSource, CyNode prevTarget,
+                                CyNode newSource, CyNode newTarget) {
+        List<CyEdge> prevEdges = network.getConnectingEdgeList(prevSource, prevTarget, CyEdge.Type.ANY);
+
+        if (!prevEdges.isEmpty()) {
+            CyEdge prevEdge = prevEdges.iterator().next();
+
+            CyEdge newEdge = network.addEdge(newSource, newTarget, true);
+
+            copyKeggEdgeAttributes(prevEdge, newEdge);
+            network.removeEdges(prevEdges);
+            String entry1 = network.getDefaultNodeTable().getRow(newSource.getSUID())
+                    .get(EKeggNodeAttrs.ENTRY_ID.getAttrName(), String.class);
+            NetworkManager.setAttribute(EKeggEdgeAttrs.ENTRY1.getAttrName(), entry1,
+                    network.getDefaultEdgeTable().getRow(newEdge.getSUID()), network);
+            String entry2 = network.getDefaultNodeTable().getRow(newTarget.getSUID())
+                    .get(EKeggNodeAttrs.ENTRY_ID.getAttrName(), String.class);
+            NetworkManager.setAttribute(EKeggEdgeAttrs.ENTRY2.getAttrName(), entry2,
+                    network.getDefaultEdgeTable().getRow(newEdge.getSUID()), network);
+            return newEdge;
+        } else {
+            System.out.println("No interaction exists between " + prevSource.getSUID().toString() + ": " +
+                    prevTarget.getSUID().toString());
+            return null;
+        }
+    }
+
+    private void copyKeggEdgeAttributes(CyEdge source, CyEdge dest) {
+
+        CyRow sourceRow = network.getDefaultEdgeTable().getRow(source.getSUID());
+        CyRow destRow = network.getDefaultEdgeTable().getRow(dest.getSUID());
+        for (EKeggEdgeAttrs attrs : EKeggEdgeAttrs.values()) {
+            Object attribute = sourceRow.get(attrs.getAttrName(), String.class);
+            Object destAttr = destRow.get(attrs.getAttrName(), String.class);
+            if (attribute != null && (destAttr == null)) {
+                if (attribute instanceof String)
+                    NetworkManager.setAttribute(attrs.getAttrName(), (String) attribute,
+                            destRow, network);
+            }
+        }
+
+    }
+
+    private void connectNodes(CyNode source, CyNode target) {
+
+        CyEdge edge = network.addEdge(source, target, true);
+        CyRow edgeRow = network.getDefaultEdgeTable().getRow(edge.getSUID());
+        String sourceEntryID = network.getDefaultNodeTable().getRow(source.getSUID())
+                .get(EKeggNodeAttrs.ENTRY_ID.getAttrName(), String.class);
+        String targetEntryID = network.getDefaultNodeTable().getRow(target.getSUID())
+                .get(EKeggNodeAttrs.ENTRY_ID.getAttrName(), String.class);
+        if (sourceEntryID != null && targetEntryID != null){
+            NetworkManager.setAttribute(EKeggEdgeAttrs.ENTRY1.getAttrName(),
+                    sourceEntryID, edgeRow, network);
+            NetworkManager.setAttribute(EKeggEdgeAttrs.ENTRY2.getAttrName(),
+                    targetEntryID, edgeRow, network);
+        }
+    }
+
+
+
+    /*private void copyKeggNodeAttributes(CyNode source, CyNode dest) {
+        if (cyNodeAttrs == null)
+            cyNodeAttrs = Cytoscape.getNodeAttributes();
+        for (EKeggNodeAttrs attrs : EKeggNodeAttrs.values()) {
+            Object attribute = cyNodeAttrs.getAttribute(source.getIdentifier(), attrs.getAttrName());
+            Object destAttr = cyNodeAttrs.getAttribute(dest.getIdentifier(), attrs.getAttrName());
+            if (attribute != null && destAttr == null) {
+                if (attribute instanceof String)
+                    cyNodeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (String) attribute);
+                else if (attribute instanceof Double)
+                    cyNodeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Double) attribute);
+                else if (attribute instanceof Integer)
+                    cyNodeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Integer) attribute);
+                else if (attribute instanceof Boolean)
+                    cyNodeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Boolean) attribute);
+
+            }
+        }
+
+    }                  */
+
+    private void setEdgeAttributes(CyEdge edge, KeggRelation relation) {
+        CyRow edgeRow = edgeTable.getRow(edge);
+
+        edgeRow.set(EKeggEdgeAttrs.ENTRY1.getAttrName(), relation.getEntry1().getId() + "");
+        edgeRow.set(EKeggEdgeAttrs.ENTRY2.getAttrName(), relation.getEntry2().getId() + "");
+        edgeRow.set(EKeggEdgeAttrs.TYPE.getAttrName(), relation.getType());
+        edgeRow.set(EKeggEdgeAttrs.TYPE_MAPPED.getAttrName(), mapRelationType(relation.getType()));
+        edgeRow.set(EKeggEdgeAttrs.SUBTYPE1.getAttrName(), relation.getSubtype1());
+        edgeRow.set(EKeggEdgeAttrs.SUBTYPE2.getAttrName(), relation.getSubtype2());
+        edgeRow.set(EKeggEdgeAttrs.ARROWSHAPE.getAttrName(), relation.getArrowShape().getDisplayName());
+        edgeRow.set(EKeggEdgeAttrs.LINESTYLE.getAttrName(), relation.getLineStyle().getDisplayName());
+        edgeRow.set(EKeggEdgeAttrs.EDGELABEL.getAttrName(), relation.getEdgeLabel());
+        edgeRow.set(EKeggEdgeAttrs.RELATIONVALUE1.getAttrName(), relation.getRelationValue1());
+        edgeRow.set(EKeggEdgeAttrs.RELATIONVALUE2.getAttrName(), relation.getRelationValue2());
+        edgeRow.set(EKeggEdgeAttrs.COMMENT.getAttrName(), relation.getComment());
+    }
+
+    /*private void copyKeggEdgeAttributes(CyEdge source, CyEdge dest) {
+        if (cyEdgeAttrs == null)
+            cyEdgeAttrs = Cytoscape.getEdgeAttributes();
+        for (EKeggEdgeAttrs attrs : EKeggEdgeAttrs.values()) {
+            Object attribute = cyEdgeAttrs.getAttribute(source.getIdentifier(), attrs.getAttrName());
+            Object destAttr = cyEdgeAttrs.getAttribute(dest.getIdentifier(), attrs.getAttrName());
+            if (attribute != null && (destAttr == null)) {
+                if (attribute instanceof String)
+                    cyEdgeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (String) attribute);
+                else if (attribute instanceof Double)
+                    cyEdgeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Double) attribute);
+                else if (attribute instanceof Integer)
+                    cyEdgeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Integer) attribute);
+                else if (attribute instanceof Boolean)
+                    cyEdgeAttrs.setAttribute(dest.getIdentifier(), attrs.getAttrName(),
+                            (Boolean) attribute);
+            }
+        }  */
+
+
+    private int calculateFontSize(KeggNode keggNode) {
+        int fontSize = keggNode.getWidth() * keggNode.getHeight() / keggNode.getCellName().length() / 15;
+        if (fontSize > 17)
+            fontSize = 17;
+        return fontSize;
+    }
+
+    private String mapRelationType(String keggType) {
+        if (keggType.equals(KeggRelation.PPrel))
+            return "pp";
+        if (keggType.equals(KeggRelation.PCrel))
+            return "pp";
+        if (keggType.equals(KeggRelation.ECrel))
+            return "rc";
+        if (keggType.equals(KeggRelation.GErel))
+            return "pd";
+        return "";
+    }
+
+}

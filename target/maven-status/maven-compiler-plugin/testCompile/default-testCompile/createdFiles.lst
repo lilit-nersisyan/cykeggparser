@@ -1,0 +1,10 @@
+org\cytoscape\keggparser\com\GraphTest.class
+org\cytoscape\keggparser\actions\KeggLoadActionTest$1.class
+org\cytoscape\keggparser\KEGGParserPluginTest.class
+org\cytoscape\keggparser\tuning\TunerTest.class
+org\cytoscape\keggparser\dialogs\KeggLoadFrameTest.class
+org\cytoscape\keggparser\dialogs\KeggLoadFrameTest$1.class
+org\cytoscape\keggparser\actions\KeggLoadActionTest.class
+org\cytoscape\keggparser\com\KeggNodeTest.class
+org\cytoscape\keggparser\com\KeggRelationTest.class
+org\cytoscape\keggparser\actions\KeggHelpActionTest.class

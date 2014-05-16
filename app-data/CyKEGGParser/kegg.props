@@ -1,0 +1,26 @@
+#
+#Sat Feb 15 18:34:04 GMT+04:00 2014
+tuning.geneExpression=false
+auto.bindingDirProcessing=true
+tuning.ppi.source.KEGG=true
+tuning.ppi=true
+webimport.organism=Homo sapiens (human)
+tuning.generateNewNetwork=true
+tuning.tse.keepAbsentGenes=true
+auto.groupProcessing=true
+tuning.tissueType=Normal
+tuning.expThreshold=16
+tuning.tse.conflictMode=mean
+tuning.ppi.source.GRID=true
+tuning.tissue=No tissues available
+tuning.typeAttr=Type
+auto.compoundProcessing=true
+tuning.ppi.keepIndirectInteractions=true
+tuning.ppi.source.DIP=true
+tuning.ppi.source.MINT=true
+tuning.geneIdAttr=EntrezIDs
+tuning.typeValues=gene
+tuning.ppi.threshold=100
+tuning.ppi.source.PDB=true
+tuning.database=BioGPS   (only for human genes)
+webimport.pathway=B cell receptor signaling pathway

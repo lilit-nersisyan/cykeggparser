@@ -1,0 +1,27 @@
+#Cytoscape Property File
+#Sat Dec 28 14:42:44 GMT+04:00 2013
+tuning.geneExpression=false
+auto.bindingDirProcessing=true
+tuning.ppi.source.KEGG=true
+tuning.ppi=true
+webimport.organism=Homo sapiens (human)
+tuning.generateNewNetwork=true
+auto.groupProcessing=true
+tuning.tissueType=Normal
+tuning.expThreshold=16
+tuning.tse.conflictMode=mean
+tuning.ppi.source.GRID=true
+tuning.tissue=No tissues available
+tuning.typeAttr=Type
+auto.compoundProcessing=true
+tuning.ppi.source.DIP=true
+tuning.ppi.source.MINT=true
+tuning.geneIdAttr=EntrezIDs
+tuning.ppi.threshold=100
+tuning.typeValues=gene
+tuning.ppi.source.PDB=true
+tuning.database=BioGPS   (only for human genes)
+webimport.pathway=B cell receptor signaling pathway
+tuning.tse.keepAbsentGenes=true
+tuning.ppi.keepIndirectInteractions=true
+

@@ -1,0 +1,27 @@
+package org.cytoscape.keggparser.com;
+
+
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertNotNull;
+
+public class GraphTest {
+    private Graph graph;
+
+    @Before
+    public void setUp() {
+        graph = new Graph();
+    }
+
+    @Test
+    public void testConstructor(){
+        assertNotNull(graph.getNodes());
+        assertNotNull(graph.getRelations());
+    }
+
+
+
+
+}
+

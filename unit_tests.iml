@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="Osmorc" name="OSGi">
+      <configuration manifestGenerationMode="OsmorcControlled" manifestLocation="" jarfileLocation="keggparser-1.2.2.jar" outputPathType="CompilerOutputPath" bndFileLocation="" bundlorFileLocation="" bundleActivator="org.cytoscape.keggparser.KEGGParserPlugin" bundleSymbolicName="keggparser" bundleVersion="1.2.2" ignoreFilePattern="" useProjectDefaultManifestFileLocation="true" alwaysRebuildBundleJAR="false" doNotSynchronizeWithMaven="false">
+        <additionalProperties>
+          <property key="Export-Package" value="com.google.gson.*;version=2.2.1," />
+          <property key="Embed-Dependency" value="gson;inline=true" />
+          <property key="Embed-Transitive" value="false" />
+          <property key="Private-Package" value="org.cytoscape.keggparser.*" />
+          <property key="Bundle-Name" value="CyKEGGParser" />
+          <property key="Include-Resource" value="@$MAVEN_REPOSITORY$/com/google/code/gson/gson/2.2.1/gson-2.2.1.jar" />
+        </additionalProperties>
+        <additionalJARContents />
+      </configuration>
+    </facet>
+  </component>
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_6" inherit-compiler-output="false">
+    <output url="file://$MODULE_DIR$/target/classes" />
+    <output-test url="file://$MODULE_DIR$/target/test-classes" />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/lib" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.cytoscape:swing-application-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:work-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:work-swing-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:property-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:event-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:session-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:model-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:vizmap-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:viewmodel-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:application-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:presentation-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.cytoscape:service-api:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.osgi:org.osgi.core:4.2.0" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.cytoscape:model-impl:test-jar:tests:3.0.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.cytoscape:equations-impl:3.0.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.cytoscape:equations-api:3.0.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: com.googlecode.guava-osgi:guava-osgi:9.0.0" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: cytoscape-temp:parallelcolt:0.9.4" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.cytoscape:model-impl:3.0.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.8.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.mockito:mockito-all:1.8.5" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.ops4j.pax.logging:pax-logging-api:1.5.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.cytoscape:service-api:test-jar:tests:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.6.5" level="project" />
+    <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.2.1" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.easytesting:fest-swing:1.2.1" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.easytesting:fest-assert:1.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.easytesting:fest-util:1.1.3" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.easytesting:fest-reflect:1.2" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: net.jcip:jcip-annotations:1.0" level="project" />
+  </component>
+</module>
+
