@@ -1,7 +1,6 @@
 package org.cytoscape.keggparser.parsing;
 
 import org.cytoscape.keggparser.com.*;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -34,41 +33,121 @@ public class SaxHandler extends DefaultHandler {
             node.setLink(attributes.getValue(EKGMLNodeAttrs.KGML_LINK.getAttrName()));
         }
         else if (qName.equals("graphics")){
-            node.setGraphicsName(attributes.getValue(EKGMLNodeAttrs.KGML_NAME.getAttrName()));
-            node.setFgColorAttr(attributes.getValue(EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName()));
-            node.setFgColor(Color.decode(attributes.getValue(EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName())));
-            node.setBgColorAttr(attributes.getValue(EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName()));
-            node.setBgColor(Color.decode(attributes.getValue(EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName())));
-            node.setShape(attributes.getValue(EKGMLNodeAttrs.KGML_TYPE.getAttrName()));
-            int x;
+            String value;
+            if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_NAME.getAttrName()))!=null)
+                node.setGraphicsName(value);
+            else {
+                ParsingReportGenerator.getInstance()
+                        .append("Attribute " + EKGMLNodeAttrs.KGML_NAME.getAttrName()
+                                + " name does not exist for node " + node.toString());
+                node.setGraphicsName(EKGMLNodeAttrs.KGML_NAME.getDefaultValue());
+            }
+            if((value = attributes.getValue(EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName()))!=null)
+                node.setFgColorAttr(value);
+            else {
+                ParsingReportGenerator.getInstance()
+                        .appendLine("Attribute "
+                                + EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName()
+                                + " does not exist for node " + node.toString());
+                node.setFgColorAttr(EKGMLNodeAttrs.KGML_FGCOLOR.getDefaultValue());
+            }
             try {
-                x = Integer.parseInt(attributes.getValue(EKGMLNodeAttrs.KGML_X.getAttrName()));
-            } catch (IllegalArgumentException e1 ){
+                node.setFgColor(Color.decode
+                        (attributes.getValue(EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName())));
+            } catch (Exception e){
+                ParsingReportGenerator.getInstance()
+                        .appendLine("Could not set "
+                                + EKGMLNodeAttrs.KGML_FGCOLOR.getAttrName()
+                                + " for node " + node.toString());
+                node.setFgColor(Color.decode(EKGMLNodeAttrs.KGML_FGCOLOR.getDefaultValue()));
+            }
 
-                try {
-                    x = (int) Double.parseDouble(attributes.getValue(EKGMLNodeAttrs.KGML_X.getAttrName()));
-                } catch (IllegalArgumentException e2 ){
-                    LoggerFactory.getLogger(SaxHandler.class).warn(e2.getMessage());
-                    x = 0;
+            if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName()))!=null)
+                node.setBgColorAttr(value);
+            else {
+                ParsingReportGenerator.getInstance().appendLine("Attribute "
+                        + EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName()
+                        + "name does not exist for node " + node.toString());
+                node.setBgColorAttr(EKGMLNodeAttrs.KGML_BGCOLOR.getDefaultValue());
+            }
+            try{
+                node.setBgColor(Color.decode(attributes.getValue(EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName())));
+            } catch (Exception e){
+                ParsingReportGenerator.getInstance().appendLine("Could not set "
+                        + EKGMLNodeAttrs.KGML_BGCOLOR.getAttrName()
+                        + " for node " + node.toString());
+                node.setBgColor(Color.decode(EKGMLNodeAttrs.KGML_BGCOLOR.getDefaultValue()));
+            }
+
+            if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_TYPE.getAttrName()))!=null)
+                node.setShape(value);
+            else {
+                ParsingReportGenerator.getInstance().appendLine("Attribute "
+                        + EKGMLNodeAttrs.KGML_TYPE.getAttrName()
+                        + " does not exist for node " + node.toString());
+                node.setShape(EKGMLNodeAttrs.KGML_TYPE.getDefaultValue());
+            }
+
+            int x = (int) Double.parseDouble(EKGMLNodeAttrs.KGML_X.getDefaultValue());
+            int y = (int) Double.parseDouble(EKGMLNodeAttrs.KGML_Y.getDefaultValue());
+            int width = (int) Double.parseDouble(EKGMLNodeAttrs.KGML_WIDTH.getDefaultValue());
+            int height = (int) Double.parseDouble(EKGMLNodeAttrs.KGML_HEIGHT.getDefaultValue());
+
+            if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_COORDS.getAttrName())) != null){
+                String[] coords = value.split(",");
+                if (coords.length != 4) {
+                    ParsingReportGenerator.getInstance()
+                            .appendLine(EKGMLNodeAttrs.KGML_COORDS.getAttrName()
+                                    + " attribute contains "
+                                    + coords.length + " elements, instead of 4");
+                } else{
+                    try{
+                        x = (int) Double.parseDouble(coords[0]);
+                        y = (int) Double.parseDouble(coords[1]);
+                        int x2 = (int) Double.parseDouble(coords[2]);
+                        int y2 = (int) Double.parseDouble(coords[3]);
+                        if(x2 - x > 1)
+                            width = x2 - x;
+                        else
+                            width = 5;
+                        if (y2 - y >  1)
+                            height = y2 - y;
+                        else
+                            height = 5;
+                    } catch (Exception e){
+                    }
+                }
+            } else{
+                if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_X.getAttrName()))!=null) {
+                    try {
+                        x = (int) Double.parseDouble(value);
+                    } catch (Exception e) {
+                    }
+                }
+                if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_Y.getAttrName()))!=null) {
+                    try {
+                        y = (int) Double.parseDouble(value);
+                    } catch (Exception e) {
+                    }
+                }
+                if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_WIDTH.getAttrName()))!=null) {
+                    try {
+                        width = (int) Double.parseDouble(value);
+                    } catch (Exception e) {
+                    }
+                }
+                if ((value = attributes.getValue(EKGMLNodeAttrs.KGML_HEIGHT.getAttrName()))!=null) {
+                    try {
+                        height = (int) Double.parseDouble(value);
+                    } catch (Exception e) {
+                    }
                 }
             }
+
             node.setX(x);
-            int y;
-            try {
-                y = Integer.parseInt(attributes.getValue(EKGMLNodeAttrs.KGML_Y.getAttrName()));
-            } catch (IllegalArgumentException e1 ){
-
-                try {
-                    y = (int) Double.parseDouble(attributes.getValue(EKGMLNodeAttrs.KGML_Y.getAttrName()));
-                } catch (IllegalArgumentException e2 ){
-                    LoggerFactory.getLogger(SaxHandler.class).warn(e2.getMessage());
-                    y = 0;
-                }
-            }
             node.setY(y);
-
-            node.setWidth(Integer.parseInt(attributes.getValue(EKGMLNodeAttrs.KGML_WIDTH.getAttrName())));
-            node.setHeight(Integer.parseInt(attributes.getValue(EKGMLNodeAttrs.KGML_HEIGHT.getAttrName())));
+            node.setWidth(width);
+            node.setHeight(height);
         }
         else if (qName.equals("component")){
             node.addComponentId(Integer.parseInt(attributes.getValue(EKGMLNodeAttrs.KGML_ID.getAttrName())));

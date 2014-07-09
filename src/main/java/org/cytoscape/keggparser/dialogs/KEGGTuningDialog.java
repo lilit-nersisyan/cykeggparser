@@ -802,8 +802,6 @@ public class KEGGTuningDialog extends JFrame {
             jb_loadDataset.setText(xmlFile.getName() + "_" +
                     jcb_selectTissue.getSelectedItem().toString() + " loaded");
         }
-
-
     }
 
 

@@ -5,12 +5,13 @@ public enum EKGMLNodeAttrs {
     KGML_NAME("name", ""),
     KGML_TYPE("type", ""),
     KGML_LINK("link", ""),
-    KGML_WIDTH("width", ""),
-    KGML_HEIGHT("height", ""),
-    KGML_FGCOLOR("fgcolor", ""),
-    KGML_BGCOLOR("bgcolor", ""),
-    KGML_X("x", ""),
-    KGML_Y("y", "");
+    KGML_WIDTH("width", "30"),
+    KGML_HEIGHT("height", "10"),
+    KGML_FGCOLOR("fgcolor", "#FFFFFF"),
+    KGML_BGCOLOR("bgcolor", "#FFFFFF"),
+    KGML_X("x", "0"),
+    KGML_Y("y", "0"),
+    KGML_COORDS("coords", "");
 
     private String attribute;
     private String defaultValue;

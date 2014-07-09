@@ -59,7 +59,7 @@ public class GeneCardsXMLCreator {
 
     public void createGeneCardsXML(File sourceFile, File outFile) {
         try {
-            loadBioGpsData(sourceFile);
+                      loadBioGpsData(sourceFile);
 //            System.out.println(tissueList);
 //            System.out.println(expMap.toString());
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
